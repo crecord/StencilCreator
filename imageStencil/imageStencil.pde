@@ -10,13 +10,19 @@ int ctrlW = 200;
 int ctrlB = 10;
 boolean invert;
 RadioButton r;
+int threshValue;
+boolean isThreshold;
+ArrayList<Contour> contours;
 
 void setup() {
   // loads image as gray scale
   img = loadImage("premasticated.png"); 
   opencv = new OpenCV(this, img);
+  opencv.gray();
   size(opencv.width + ctrlW, opencv.height, P2D);
   grayImage = opencv.getSnapshot();
+  // "img" will hold the orginal greyscale image so all changes can be made from it
+  img = grayImage;
   cp5 = new ControlP5(this);
   // eventually have a drag and drop file system
   text("loadImage", ctrlB, 20);
@@ -24,7 +30,7 @@ void setup() {
   cp5.addToggle("invert")
     .setPosition(ctrlB, 40)
       .setSize(50, 20)
-        .setValue(true)
+        .setValue(false)
           .setMode(ControlP5.SWITCH)
             ;
   // slider to create border
@@ -44,13 +50,15 @@ void setup() {
          .addItem("adaptive threshold",2)
          ;
   // set threshold value 
-  cp5.addSlider("thesholdValue", 0, 255, 80, ctrlB, 165, 50, 15);
+  cp5.addSlider("thresholdValue", 0, 255, threshValue, ctrlB, 165, 50, 15);
   // button to save as a pdf
     cp5.addButton("savePDF")
-     .setValue(0)
+     .setValue(1)
      .setPosition(ctrlB, 190)
      .setSize(80,19)
      ;
+ isThreshold = false;
+  
 }
 
 void draw() {
@@ -61,8 +69,54 @@ public void pixelBorder(int theValue) {
   println("### got an event from numberboxC : "+theValue);
 }
 
+void savePDF(int value){
+  println("button" + value); 
+  strokeWeight(1);
+  contours = opencv.findContours();
+  beginRecord(PDF, "test.pdf");
+    for (Contour contour : contours) {
+    contour.draw();
+  }
+  endRecord();
+  open("test.pdf");
+}
+
+public void invert(int theValue) {
+  println("toggle "+theValue);
+  opencv.loadImage(img);
+  opencv.invert();
+  img = opencv.getSnapshot();
+  grayImage = opencv.getSnapshot();
+}
+
+
+void thresholdValue(int value){
+  println("the threshold value changed " + value); 
+  if (isThreshold){
+    opencv.loadImage(img);
+    opencv.threshold(value); 
+    grayImage = opencv.getOutput();
+    threshValue = value;
+    println("reThresholded");
+  }
+}
+
 void radioButton(int a) {
   println("a radio Button event: "+a);
+  opencv.loadImage(img);
+  if(a == 1){
+      opencv.threshold(threshValue); 
+      grayImage = opencv.getOutput();
+      isThreshold = true;
+    // adptive threshold;
+      println("trexh");
+  }
+  else if (a ==2){
+      opencv.adaptiveThreshold(561, 1);
+      grayImage = opencv.getSnapshot();
+      isThreshold = false;
+      println("adaptThresholded");
+  }
 }
 
 
